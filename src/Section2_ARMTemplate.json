@@ -1,0 +1,251 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "uniqueSuffix": {
+        "type": "String",
+        "metadata": {
+          "description": "Suffix added to all resource name to make them unique."
+        }
+      },
+      "sqlAdministratorLoginPassword": {
+        "type": "SecureString",
+        "metadata": {
+          "description": "Password for SQL Admin"
+        }
+      }
+    },
+    "variables": {
+      "location": "[resourceGroup().location]",
+      "sqlAdministratorLogin": "sqladminuser",
+      "cosmosDbAccountName": "[concat('bri-cosmos-', variables('uniqueSuffix'))]",
+      "uniqueSuffix": "[toLower(parameters('uniqueSuffix'))]",
+	  "uniqueSqlServerName": "[concat('bri-sqldb-', variables('uniqueSuffix'))]",
+	  "databaseName": "LahmanDB",
+	  "storageAccountName": "[tolower(concat('brisqlva', variables('uniqueSuffix')))]",
+	  "bacpacUrl": "https://cspolybasepublic.blob.core.windows.net/cstrainingpublicdata/LahmanDB.bacpac"
+    },
+    "resources": [
+		{
+            "name": "[variables('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-04-01",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "location": "[variables('location')]",
+            "properties": {
+                "networkAcls": {
+                    "bypass": "AzureServices",
+                    "virtualNetworkRules": [],
+                    "ipRules": [],
+                    "defaultAction": "Allow"
+                },
+                "accessTier": "Hot"
+            }
+        },
+		{
+			"type": "Microsoft.DocumentDB/databaseAccounts",
+			"apiVersion": "2020-03-01",
+			"name": "[variables('cosmosDbAccountName')]",
+			"location": "[variables('location')]",
+			"dependsOn": [],
+			"tags": {
+			  "defaultExperience": "Core (SQL)",
+			  "hidden-cosmos-mmspecial": "",
+			  "CosmosAccountType": "Non-Production"
+			},
+			"kind": "GlobalDocumentDB",
+			"properties": {
+			  "publicNetworkAccess": "Enabled",
+			  "enableAutomaticFailover": false,
+			  "enableMultipleWriteLocations": false,
+			  "isVirtualNetworkFilterEnabled": false,
+			  "virtualNetworkRules": [],
+			  "disableKeyBasedMetadataWriteAccess": false,
+			  "databaseAccountOfferType": "Standard",
+			  "consistencyPolicy": {
+				"defaultConsistencyLevel": "Session",
+				"maxIntervalInSeconds": 5,
+				"maxStalenessPrefix": 100
+			  },
+			  "locations": [
+				{
+				  "locationName": "[variables('location')]",
+				  "provisioningState": "Succeeded",
+				  "failoverPriority": 0,
+				  "isZoneRedundant": false
+				}
+			  ],
+			  "capabilities": []
+			}
+		},
+		{
+			"type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+			"apiVersion": "2020-03-01",
+			"name": "[concat(variables('cosmosDbAccountName'), '/Retrosheet')]",
+			"dependsOn": [
+			  "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDbAccountName'))]"
+			],
+			"properties": {
+			  "resource": {
+				"id": "Retrosheet"
+			  },
+			  "options": {}
+			}
+		},
+		{
+			"type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+			"apiVersion": "2020-03-01",
+			"name": "[concat(variables('cosmosDbAccountName'), '/Retrosheet/GameData')]",
+			"dependsOn": [
+			  "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosDbAccountName'), 'Retrosheet')]",
+			  "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDbAccountName'))]"
+			],
+			"properties": {
+			  "resource": {
+				"id": "GameData",
+				"indexingPolicy": {
+				  "indexingMode": "consistent",
+				  "automatic": true,
+				  "includedPaths": [
+					{
+					  "path": "/*"
+					}
+				  ],
+				  "excludedPaths": [
+					{
+					  "path": "/\"_etag\"/?"
+					}
+				  ]
+				},
+				"partitionKey": {
+				  "paths": [
+					"/gameId"
+				  ],
+				  "kind": "Hash"
+				},
+				"uniqueKeyPolicy": {
+				  "uniqueKeys": []
+				},
+				"conflictResolutionPolicy": {
+				  "mode": "LastWriterWins",
+				  "conflictResolutionPath": "/_ts"
+				}
+			  },
+			  "options": {}
+			}
+		},
+		{
+			"type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/throughputSettings",
+			"apiVersion": "2020-03-01",
+			"name": "[concat(variables('cosmosDbAccountName'), '/Retrosheet/GameData/default')]",
+			"dependsOn": [
+			  "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosDbAccountName'), 'Retrosheet', 'GameData')]",
+			  "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosDbAccountName'), 'Retrosheet')]",
+			  "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDbAccountName'))]"
+			],
+			"properties": {
+			  "resource": {
+				"throughput": 2000
+			  }
+			}
+		},
+		{
+            "name": "[variables('uniqueSqlServerName')]",
+            "type": "Microsoft.Sql/servers",
+            "apiVersion": "2015-05-01-preview",
+            "location": "[variables('location')]",
+            "properties": {
+                "administratorLogin": "[variables('sqlAdministratorLogin')]",
+                "administratorLoginPassword": "[parameters('sqlAdministratorLoginPassword')]",
+                "version": "12.0"
+            },
+            "resources": [
+                {
+                    "apiVersion": "2014-04-01-preview",
+                    "dependsOn": [
+                        "[concat('Microsoft.Sql/servers/', variables('uniqueSqlServerName'))]"
+                    ],
+                    "location": "[variables('location')]",
+                    "name": "AllowAllWindowsAzureIps",
+                    "properties": {
+                        "endIpAddress": "0.0.0.0",
+                        "startIpAddress": "0.0.0.0"
+                    },
+                    "type": "firewallrules"
+                },
+                {
+                    "apiVersion": "2017-03-01-preview",
+                    "type": "securityAlertPolicies",
+                    "name": "Default",
+                    "dependsOn": [
+                        "[concat('Microsoft.Sql/servers/', variables('uniqueSqlServerName'))]",
+                        "[concat('Microsoft.Sql/servers/', variables('uniqueSqlServerName'), '/databases/', variables('databaseName'))]"
+                    ],
+                    "properties": {
+                        "state": "Enabled",
+                        "disabledAlerts": [],
+                        "emailAddresses": [],
+                        "emailAccountAdmins": true
+                    }
+                },
+                {
+                    "apiVersion": "2018-06-01-preview",
+                    "type": "vulnerabilityAssessments",
+                    "name": "Default",
+                    "properties": {
+                        "storageContainerPath": "[concat(reference(variables('storageAccountName'), '2018-02-01').primaryEndpoints.blob, 'vulnerability-assessment')]",
+                        "storageAccountAccessKey": "[listKeys(variables('storageAccountName'), '2018-02-01').keys[0].value]",
+                        "recurringScans": {
+                            "isEnabled": true,
+                            "emailSubscriptionAdmins": true,
+                            "emails": []
+                        }
+                    },
+                    "dependsOn": [
+                        "[concat('Microsoft.Sql/servers/', variables('uniqueSqlServerName'))]",
+                        "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+                        "[concat('Microsoft.Sql/servers/', variables('uniqueSqlServerName'), '/securityAlertPolicies/Default')]"
+                    ]
+                }
+            ]
+        },
+		{
+			"type": "Microsoft.Sql/servers/databases",
+			"apiVersion": "2021-02-01-preview",
+			"name": "[concat(string(variables('uniqueSqlServerName')), '/', string(variables('databaseName')))]",
+			"location": "[variables('location')]",
+			"properties": {
+				"zoneRedundant": "false"
+			},
+			"sku": {
+				"name": "S0",
+				"tier": "Standard"
+			},
+			"dependsOn": [
+				"[concat('Microsoft.Sql/servers/', variables('uniqueSqlServerName'))]"
+			],
+			"resources": [
+			{
+				"type": "extensions",
+				"apiVersion": "2014-04-01",
+				"name": "ImportLahmanDB",
+				"dependsOn": [
+				  "[resourceId('Microsoft.Sql/servers/databases', variables('uniqueSqlServerName'), variables('databaseName'))]"
+				],
+				"properties": {
+				  "storageKeyType": "SharedAccessKey",
+				  "storageKey": "?sv=2020-08-04&st=2021-11-22T18%3A11%3A07Z&se=2099-11-23T18%3A11%3A00Z&sr=c&sp=rl&sig=g7mOdGnhcpfFWwYdIs8J9ybmbKzYa%2Bcql%2FYUrNZdY7w%3D",
+				  "storageUri": "[variables('bacpacUrl')]",
+				  "administratorLogin": "[variables('sqlAdministratorLogin')]",
+				  "administratorLoginPassword": "[parameters('sqlAdministratorLoginPassword')]",
+				  "operationMode": "Import"
+				}
+			}
+			]
+		}
+    ],
+    "outputs": {}
+}

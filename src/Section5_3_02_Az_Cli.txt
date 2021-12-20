@@ -1,0 +1,9 @@
+# Must have az cli installed
+# https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
+# Default message returns details
+az storage container generate-sas
+# Create one which will last for 30 minutes
+# Permissions:  delete list read write
+$env:AZURE_STORAGE_KEY = "<Your storage key>"
+$end = date -u -d "30 minutes" '+%Y-%m-%dT%H:%MZ'
+$sas = az storage container generate-sas --name synapse --https-only --permissions dlrw --expiry $end -o tsv --account-name briadlskf20211129

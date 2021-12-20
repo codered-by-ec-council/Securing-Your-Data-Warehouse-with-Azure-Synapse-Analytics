@@ -1,0 +1,10 @@
+# Need to have PowerShell Azure module installed
+# https://docs.microsoft.com/en-us/powershell/azure/new-azureps-module-az?view=azps-7.0.0
+Import-Module Az.Storage
+Get-Help New-AzStorageAccountSASToken
+# Setup
+$env:AZURE_STORAGE_KEY = "<Your storage key>"
+$key = $env:AZURE_STORAGE_KEY
+$context = New-AzStorageContext -StorageAccountName "<Your storage account name>" -StorageAccountKey $key
+# List (l), read (r), get/set blob tags (t), and find by tag (f)
+New-AzStorageAccountSASToken -Service Blob -ResourceType Service,Container,Object -Permission "lrtf" -IPAddressOrRange 10.0.1.0-10.0.3.255 -ExpiryTime (Get-Date).AddHours(12) -Context $context

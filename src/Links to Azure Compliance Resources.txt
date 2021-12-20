@@ -1,0 +1,6 @@
+Microsoft regulatory compliance URLs:
+- Microsoft Trust Center:  https://www.microsoft.com/en-us/trust-center/
+- Azure security:  https://azure.microsoft.com/en-us/overview/security/
+- Data privacy in Azure:  https://azure.microsoft.com/en-us/overview/trusted-cloud/privacy/
+- Compliance in Azure:  https://azure.microsoft.com/en-us/overview/trusted-cloud/compliance/
+- Azure compliance documentation:  https://docs.microsoft.com/en-us/azure/compliance/
