@@ -1,0 +1,5 @@
+# Display details on what the TokenLibrary does.
+print(TokenLibrary.help())
+
+# Get a secret from a linked service.
+TokenLibrary.getSecretWithLS("AzureKeyVault1", "SecretPassword")

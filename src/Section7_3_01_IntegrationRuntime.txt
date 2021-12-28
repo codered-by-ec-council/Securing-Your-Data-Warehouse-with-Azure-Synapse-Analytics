@@ -1,0 +1,1 @@
+You can get the latest version of the Microsoft Integrated Runtime from the following URL:  https://www.microsoft.com/download/details.aspx?id=39717

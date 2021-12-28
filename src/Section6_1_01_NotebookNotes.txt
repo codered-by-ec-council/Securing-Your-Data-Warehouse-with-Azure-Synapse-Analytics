@@ -1,0 +1,8 @@
+### The %%pyspark magic allows you to specify that you intend to write code in Python.
+### You can set the default language for any given notebook and choose between Scala, Python, C#, and SQL.
+%%pyspark
+x=1
+print(x)
+
+df = spark.read.load('abfss://synapse@<YOUR_STORAGE_ACCOUNT>.dfs.core.windows.net/import/dbo.People.parquet')
+display(df.limit(10))

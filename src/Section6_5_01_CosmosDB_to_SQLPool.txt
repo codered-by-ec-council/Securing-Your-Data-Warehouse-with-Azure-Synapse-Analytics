@@ -1,0 +1,16 @@
+# Retrieve data from Synapse Link for Cosmos DB using Python
+df = spark.read.format("cosmos.olap")\
+    .option("spark.synapse.linkedService", "CosmosDb1")\
+    .option("spark.cosmos.container", "GameData2020")\
+    .load()
+
+# Retrieve data from Synapse Link for Cosmos DB using Scala
+val df = spark.read.format("cosmos.olap").
+    option("spark.synapse.linkedService", "CosmosDb1").
+    option("spark.cosmos.container", "GameData2020").
+    load()
+
+# Write data using the Spark to Synapse SQL Connector.
+import com.microsoft.spark.sqlanalytics.utils.Constants
+import org.apache.spark.sql.SqlAnalyticsConnector._
+df.write.synapsesql("briwh.dbo.GameData2020", Constants.INTERNAL)
