@@ -1,0 +1,14 @@
+Links from the slides in section 8:
+
+Microsoft Defender for Cloud Alerts
+https://docs.microsoft.com/en-us/azure/defender-for-cloud/alerts-reference#alerts-sql-db-and-warehouse
+
+Azure Policy built-in definitions for Azure Synapse Analytics
+https://docs.microsoft.com/en-us/azure/synapse-analytics/policy-reference
+
+Connect to a Synapse workspace from a restricted network
+https://docs.microsoft.com/en-us/azure/synapse-analytics/security/how-to-connect-to-workspace-from-restricted-network
+
+
+Connect to a Synapse workspace over private link
+https://docs.microsoft.com/en-us/azure/synapse-analytics/security/how-to-connect-to-workspace-with-private-links
